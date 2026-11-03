@@ -75,13 +75,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add pyproject.toml uv.lock
-          if git diff --cached --quiet; then
-            echo "::error::Project version is already ${VERSION}, nothing to release"
-            exit 1
+          # The version may already be set (e.g. the first release), in which case there is nothing to commit.
+          if ! git diff --cached --quiet; then
+            git commit -m "Release v${VERSION}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
-          git commit -m "Release v${VERSION}"
           git tag -a "v${VERSION}" -m "Release v${VERSION}"
-          git push origin "HEAD:${GITHUB_REF_NAME}" "refs/tags/v${VERSION}"
+          git push origin "refs/tags/v${VERSION}"
 
       - name: Create GitHub release with artifacts
         run: |
