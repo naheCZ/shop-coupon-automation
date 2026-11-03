@@ -1,0 +1,12 @@
+# User timer: install to ~/.config/systemd/user/
+[Unit]
+Description=Activate shop coupons daily
+
+[Timer]
+# Activation is idempotent, running daily also catches coupons published mid-week
+OnCalendar=*-*-* 07:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

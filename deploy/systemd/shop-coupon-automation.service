@@ -1,0 +1,9 @@
+# User service: install to ~/.config/systemd/user/
+[Unit]
+Description=Shop coupon automation
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/shop-coupon-automation lidl

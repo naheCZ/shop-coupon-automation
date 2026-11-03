@@ -1,0 +1,54 @@
+[project]
+name = "shop-coupon-automation"
+version = "0.1.0"
+description = "Shop coupon automation."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "httpx2>=2.16.0",
+    "platformdirs>=4.14.0",
+    "pydantic>=2.14.2",
+]
+
+[project.scripts]
+shop-coupon-automation = "shop_coupon_automation.__main__:main"
+
+[dependency-groups]
+dev = [
+    "mockito>=2.0.4",
+    "pyrefly>=1.4.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812",  # conflicts with the formatter
+    "CPY",     # copyright notices are not required
+    "D",       # docstrings are not enforced
+    "TC",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.pyrefly]
+project-includes = ["src", "tests"]
+preset = "strict"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config"]
