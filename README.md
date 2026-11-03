@@ -65,14 +65,11 @@ uv run pyrefly check         # type check
 
 - `.github/workflows/ci.yml` runs on pushes to `main`, on pull requests, and on demand. It runs lint, format check,
   type check, tests, and builds the wheel, then checks that the wheel installs and runs.
-- `.github/workflows/release.yml` runs when a tag matching `v*` is pushed. It runs the same checks, verifies that the
-  tag matches `version` in `pyproject.toml`, builds the package, and creates a GitHub release with the wheel and sdist
-  attached.
+- `.github/workflows/release.yml` is run manually (Actions → Release → Run workflow). Enter the version, e.g. `0.2.0`.
+  It validates the version and checks that the tag does not exist yet, runs the same checks as CI, sets `version` in
+  `pyproject.toml` and `uv.lock`, builds the wheel and sdist, commits the bump, creates the `vX.Y.Z` tag and publishes the
+  GitHub release with the artifacts attached. Run it from `main`: the version commit is pushed to the branch the
+  workflow runs on.
 
-To release a new version:
-
-```bash
-# 1. bump `version` in pyproject.toml, then commit it
-git tag v0.2.0
-git push origin v0.2.0
-```
+The release workflow pushes to the branch with the `GITHUB_TOKEN`, so branch protection must allow the Actions bot to
+push, or the release fails before any tag or release is created.

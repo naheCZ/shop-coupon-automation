@@ -1,26 +1,60 @@
 name: Release
 
+# Manual release: enter a version, the workflow bumps the project version, commits it,
+# creates the tag and publishes the GitHub release with the built artifacts.
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.2.0 (a leading v is optional)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  validate:
+    name: Validate version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+    steps:
+      - name: Normalize and validate version
+        id: validate
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          version="${INPUT_VERSION#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-]?(a|b|rc)[0-9]+)?$ ]]; then
+            echo "::error::'${INPUT_VERSION}' is not a valid version (expected e.g. 0.2.0)"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/v${version}" >/dev/null 2>&1; then
+            echo "::error::Tag v${version} already exists"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
   checks:
     name: Checks
+    needs: validate
     uses: ./.github/workflows/ci.yml
 
   release:
-    name: Build and publish release
-    needs: checks
+    name: Bump, tag and publish release
+    needs: [validate, checks]
     runs-on: ubuntu-latest
-    # Only this job needs write access to create the GitHub release.
+    # Only this job needs write access to push the version commit, the tag and the release.
     permissions:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.validate.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -29,22 +63,29 @@ jobs:
         with:
           enable-cache: true
 
-      # The tag must match the version in pyproject.toml, e.g. tag v0.2.0 for version = "0.2.0".
-      - name: Verify tag matches project version
-        run: |
-          tag="${GITHUB_REF_NAME#v}"
-          version="$(uv version --short)"
-          if [ "$tag" != "$version" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match pyproject.toml version ${version}"
-            exit 1
-          fi
+      # Updates `version` in pyproject.toml and uv.lock.
+      - name: Bump project version
+        run: uv version "$VERSION" --no-sync
 
       - name: Build wheel and sdist
         run: uv build
 
+      - name: Commit version bump, tag and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml uv.lock
+          if git diff --cached --quiet; then
+            echo "::error::Project version is already ${VERSION}, nothing to release"
+            exit 1
+          fi
+          git commit -m "Release v${VERSION}"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "HEAD:${GITHUB_REF_NAME}" "refs/tags/v${VERSION}"
+
       - name: Create GitHub release with artifacts
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --title "$GITHUB_REF_NAME" \
+          gh release create "v${VERSION}" dist/* \
+            --title "v${VERSION}" \
             --generate-notes \
             --verify-tag
