@@ -74,6 +74,28 @@ def test_login_rejected_raises(tmp_path: Path) -> None:
     assert store.load() is None
 
 
+def test_rejected_login_message_includes_page_error_text(tmp_path: Path) -> None:
+    error_page = (
+        "<html><head><title>Log in</title></head><body>"
+        '<div class="validation-summary-errors"><ul><li>Invalid <b>email</b> or password.</li></ul></div>'
+        "</body></html>"
+    )
+    login = _login_handler([], login_status=200)
+
+    def handle(request: httpx2.Request) -> httpx2.Response:
+        if request.method == "POST" and request.url.path == "/Account/Login":
+            return httpx2.Response(200, text=error_page)
+        return login.handle_request(request)
+
+    auth = _auth(httpx2.MockTransport(handle), TokenStore(tmp_path / "tokens.json"))
+    with pytest.raises(LidlAuthError, match=r"Page says: Invalid email or password\."):
+        auth.login("user@example.com", "wrong")
+
+
+def test_extract_login_messages_falls_back_to_title() -> None:
+    assert LidlAuth._extract_login_messages("<html><title> Log in </title></html>") == ["page title 'Log in'"]  # noqa: SLF001
+
+
 def test_missing_antiforgery_token_raises() -> None:
     with pytest.raises(LidlAuthError, match="__RequestVerificationToken"):
         LidlAuth._extract_antiforgery_token("<html></html>")  # noqa: SLF001

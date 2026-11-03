@@ -27,6 +27,14 @@ _MAX_REDIRECTS: Final = 10
 _EXPIRY_MARGIN_SECONDS: Final = 60
 _ANTIFORGERY_PATTERN: Final = re.compile(r'name="__RequestVerificationToken"[^>]*value="([^"]+)"')
 _REDIRECT_STATUSES: Final = frozenset({301, 302, 303, 307, 308})
+# Elements whose class suggests a validation or error message, e.g. <div class="validation-summary-errors">
+_ERROR_ELEMENT_PATTERN: Final = re.compile(
+    r'<(?P<tag>[a-z0-9]+)[^>]*class="[^"]*(?:validation|error|danger)[^"]*"[^>]*>(?P<text>.*?)</(?P=tag)>',
+    re.IGNORECASE | re.DOTALL,
+)
+_TAG_PATTERN: Final = re.compile(r"<[^>]+>")
+_TITLE_PATTERN: Final = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+_MAX_MESSAGE_LENGTH: Final = 200
 
 
 class LidlAuthError(Exception):
@@ -103,7 +111,11 @@ class LidlAuth:
             follow_redirects=False,
         )
         if response.status_code not in _REDIRECT_STATUSES:
+            # A rejected login re-renders the form, so the page itself usually says why
+            details = LidlAuth._extract_login_messages(response.text)
             msg = f"Login rejected (HTTP {response.status_code}), check the credentials or reCAPTCHA enforcement"
+            if details:
+                msg = f"{msg}. Page says: {' | '.join(details)}"
             raise LidlAuthError(msg)
         code = self._follow_to_authorization_code(response)
         tokens = self._request_tokens(
@@ -216,6 +228,19 @@ class LidlAuth:
             msg = "Login page does not contain __RequestVerificationToken, the login form has probably changed"
             raise LidlAuthError(msg)
         return match.group(1)
+
+    @staticmethod
+    def _extract_login_messages(html: str) -> list[str]:
+        # Collect the text of validation/error elements and the page title, never the form values
+        messages: list[str] = []
+        for match in _ERROR_ELEMENT_PATTERN.finditer(html):
+            text = " ".join(_TAG_PATTERN.sub(" ", match.group("text")).split())
+            if text and text not in messages:
+                messages.append(text[:_MAX_MESSAGE_LENGTH])
+        title = _TITLE_PATTERN.search(html)
+        if title is not None and not messages:
+            messages.append(f"page title {' '.join(title.group(1).split())[:_MAX_MESSAGE_LENGTH]!r}")
+        return messages
 
     @staticmethod
     def _extract_authorization_code(url: str) -> str:

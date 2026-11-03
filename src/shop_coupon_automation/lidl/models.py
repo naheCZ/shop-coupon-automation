@@ -25,26 +25,18 @@ class StoredTokens(TypedDict):
     expires_at: float
 
 
-class CouponDiscount(TypedDict):
-    title: str
-    description: str
-
-
-class CouponValidity(TypedDict):
-    start: str
-    end: str
-
-
 class Coupon(TypedDict):
-    """Single promotion from the promotions list (only the fields we use)."""
+    """Single promotion from the web promotions list (only the fields we use)."""
 
     id: str
-    promotionId: str
     title: str
-    discount: CouponDiscount
-    validity: CouponValidity
+    # Product name, e.g. "Cola Zero, 2l"
+    description: str
+    # Discount label, e.g. "-15 %" or a price
+    offer: str
     isActivated: bool
-    channels: list[str]
+    endValidityDate: str
+    channel: str
 
 
 class ActivationSummary(TypedDict):
@@ -53,7 +45,8 @@ class ActivationSummary(TypedDict):
 
 
 class CouponSection(TypedDict):
-    name: str
+    id: str
+    titleKey: str
     promotions: list[Coupon]
 
 

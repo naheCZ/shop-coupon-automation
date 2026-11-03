@@ -73,11 +73,11 @@ def _lidl_activate(coupons: LidlCouponClient) -> bool:
 
 def _lidl_coupons(coupons: LidlCouponClient) -> None:
     for section in coupons.list_coupons():
-        sys.stdout.write(f"{section['name']}:\n")
+        sys.stdout.write(f"{section['titleKey']}:\n")
         for coupon in section["promotions"]:
             mark = "x" if coupon["isActivated"] else " "
-            valid_until = coupon["validity"]["end"][:10]
-            sys.stdout.write(f"  [{mark}] {coupon['discount']['title']:>8}  {coupon['title']}  (until {valid_until})\n")
+            valid_until = coupon["endValidityDate"][:10]
+            sys.stdout.write(f"  [{mark}] {coupon['offer']:>8}  {coupon['description']}  (until {valid_until})\n")
 
 
 def _run_lidl(command: LidlCommand, credentials: LidlCredentials | None) -> bool:

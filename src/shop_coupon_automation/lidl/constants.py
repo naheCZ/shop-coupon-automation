@@ -21,9 +21,11 @@ BROWSER_USER_AGENT: Final = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 )
 
-COUPONS_URL: Final = "https://coupons.lidlplus.com/app/api"
-PROMOTIONS_LIST_URL: Final = f"{COUPONS_URL}/v4/promotionslist"
-PROMOTION_ACTIVATION_URL: Final = f"{COUPONS_URL}/v2/promotions/{{coupon_id}}/activation"
+# The web API lists every coupon (including store-only offers the app API does not return) and activates them all.
+# It accepts the same bearer token as the app.
+COUPONS_URL: Final = f"https://www.lidl.cz/prm/api/v1/{COUNTRY}"
+PROMOTIONS_LIST_URL: Final = f"{COUPONS_URL}/promotionslist?language={LANGUAGE}"
+PROMOTION_ACTIVATION_URL: Final = f"{COUPONS_URL}/promotions/{{coupon_id}}/activation?language={LANGUAGE}"
 
 # Headers sent by the Lidl Plus Android app
 APP_HEADERS: Final = {

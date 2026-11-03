@@ -23,16 +23,17 @@ def test_lidl_coupons_prints_activation_state(capsys: pytest.CaptureFixture[str]
     when(coupons).list_coupons().thenReturn(
         [
             {
-                "name": "AllStores",
+                "id": "all",
+                "titleKey": "coupons_couponslist_allstorescoupons",
                 "promotions": [
                     {
                         "id": "c1",
-                        "promotionId": "p1",
-                        "title": "Cola Zero, 2l",
-                        "discount": {"title": "-15 %", "description": "sleva"},
-                        "validity": {"start": "2026-10-26T00:00:00Z", "end": "2026-11-01T22:59:59Z"},
+                        "title": "sleva",
+                        "description": "Cola Zero, 2l",
+                        "offer": "-15 %",
                         "isActivated": True,
-                        "channels": ["Store"],
+                        "endValidityDate": "2026-11-01T22:59:59Z",
+                        "channel": "Store",
                     }
                 ],
             }
@@ -41,7 +42,9 @@ def test_lidl_coupons_prints_activation_state(capsys: pytest.CaptureFixture[str]
 
     _lidl_coupons(coupons)
 
-    assert capsys.readouterr().out == "AllStores:\n  [x]    -15 %  Cola Zero, 2l  (until 2026-11-01)\n"
+    assert capsys.readouterr().out == (
+        "coupons_couponslist_allstorescoupons:\n  [x]    -15 %  Cola Zero, 2l  (until 2026-11-01)\n"
+    )
 
 
 @pytest.mark.parametrize("argv", [["lidl"], ["lidl", "activate"], ["lidl", "coupons"]])
